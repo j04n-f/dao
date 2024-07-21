@@ -27,7 +27,8 @@ jobs:
         with:
           version: nightly
 
-      - uses: actions/setup-node@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20.15.0
 
@@ -47,10 +48,11 @@ jobs:
           artifact-name: code-coverage-report
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: .
+          update-comment: true
 
       - name: Install Aderyn
         run: |
-          forge fmt --check
+          cargo install aderyn
 
       - name: Run Aderyn
         run: |
