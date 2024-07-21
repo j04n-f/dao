@@ -1,0 +1,14 @@
+{
+  // it is recommended to specify a Solidity compiler version. It must be
+  // in line with the Foundry default profile
+  "solidity.compileUsingRemoteVersion": "v0.8.24",
+  // For the extension to find your dependencies
+  "solidity.packageDefaultDependenciesContractsDirectory": "src",
+  "solidity.packageDefaultDependenciesDirectory": "lib",
+  // enable the built-in formatter that comes with Foundry to automatically format your code on save
+  "editor.formatOnSave": true,
+  "[solidity]": {
+    "editor.defaultFormatter": "JuanBlanco.solidity"
+  },
+  "solidity.formatter": "forge"
+}
