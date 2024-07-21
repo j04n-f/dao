@@ -10,10 +10,7 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    strategy:
-      fail-fast: true
-
+  lint-and-test:
     name: Lint & Test
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +38,8 @@ jobs:
           forge coverage --force --report lcov -vvv
 
       - name: Report Code Coverage
-        uses: zgosalvez/github-actions-report-lcov@v1
+        uses: zgosalvez/github-actions-report-lcov@v4.1.12
+        if: always()
         with:
           coverage-files: lcov.info
           minimum-coverage: 20
@@ -49,6 +47,20 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: .
           update-comment: true
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
 
       - name: Install Aderyn
         run: |
