@@ -5,21 +5,20 @@ import "forge-std/Test.sol";
 import "../src/ReputationManager.sol";
 import "../src/AccessManager.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract BaseTest is Test {
     ReputationManager public reputationManager;
     AccessManager public accessManager;
     address public owner;
-    address public admin;
+    address public manager;
     address public user;
 
-    uint64 ADMIN = 42;
+    uint64 MANAGER = 42;
 
     function setUp() public {
         owner = address(0x1);
-        admin = address(0x2);
+        manager = address(0x2);
         user = address(0x3);
 
         accessManager = AccessManager(
@@ -39,8 +38,8 @@ contract BaseTest is Test {
         selectors[3] = bytes4(keccak256("unpause()"));
 
         vm.startPrank(owner);
-        accessManager.grantRole(ADMIN, admin, 0);
-        accessManager.setTargetFunctionRole(address(reputationManager), selectors, ADMIN);
+        accessManager.grantRole(MANAGER, manager, 0);
+        accessManager.setTargetFunctionRole(address(reputationManager), selectors, MANAGER);
         vm.stopPrank();
     }
 }
@@ -51,14 +50,14 @@ contract ReputationManagerTest is BaseTest {
     }
 
     function test_Reward() public {
-        vm.startPrank(admin);
+        vm.startPrank(manager);
         reputationManager.reward(user, 100);
         vm.stopPrank();
         assertEq(reputationManager.reputationOf(user), 100);
     }
 
     function test_Penalize() public {
-        vm.startPrank(admin);
+        vm.startPrank(manager);
         reputationManager.reward(user, 100);
         reputationManager.penalize(user, 50);
         vm.stopPrank();
@@ -68,7 +67,7 @@ contract ReputationManagerTest is BaseTest {
 
 contract ReputationManagerPauseTest is BaseTest {
     function test_RevertWhen_RewardPaused() public {
-        vm.startPrank(admin);
+        vm.startPrank(manager);
         reputationManager.pause();
         vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
         reputationManager.reward(user, 100);
@@ -76,7 +75,7 @@ contract ReputationManagerPauseTest is BaseTest {
     }
 
     function test_RevertWhen_PenalizePaused() public {
-        vm.startPrank(admin);
+        vm.startPrank(manager);
         reputationManager.pause();
         vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
         reputationManager.penalize(user, 100);
@@ -84,7 +83,7 @@ contract ReputationManagerPauseTest is BaseTest {
     }
 
     function test_RewardUnpause() public {
-        vm.startPrank(admin);
+        vm.startPrank(manager);
         reputationManager.pause();
         reputationManager.unpause();
         reputationManager.reward(user, 100);
@@ -93,7 +92,7 @@ contract ReputationManagerPauseTest is BaseTest {
     }
 
     function test_PenalizeUnpause() public {
-        vm.startPrank(admin);
+        vm.startPrank(manager);
         reputationManager.pause();
         reputationManager.unpause();
         reputationManager.reward(user, 100);

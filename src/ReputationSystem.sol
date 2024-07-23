@@ -10,10 +10,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./ReputationManager.sol";
 import {Value as Level, Value as Penalty, Value as Reward, Mapping} from "./lib/Mapping.sol";
 
+/// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract ReputationSystem is Initializable, PausableUpgradeable, AccessManagedUpgradeable, UUPSUpgradeable {
     using Mapping for Mapping.Map;
-
-    uint256 private constant REPUTATION = 0;
 
     event LevelCreated(string title, uint256 requiredReputation);
     event LevelUpdated(string title, uint256 requiredReputation, bool enabled);
@@ -57,12 +56,12 @@ contract ReputationSystem is Initializable, PausableUpgradeable, AccessManagedUp
     }
 
     modifier rewardExists(string calldata _title) {
-        if (!rewards.has(_title)) revert NotFoundError("Level", _title);
+        if (!rewards.has(_title)) revert NotFoundError("Reward", _title);
         _;
     }
 
     modifier penaltyExists(string calldata _title) {
-        if (!penalties.has(_title)) revert NotFoundError("Level", _title);
+        if (!penalties.has(_title)) revert NotFoundError("Penalty", _title);
         _;
     }
 
@@ -70,8 +69,10 @@ contract ReputationSystem is Initializable, PausableUpgradeable, AccessManagedUp
         return keccak256(bytes(_title));
     }
 
-    function levelRequired(string calldata _title) public view returns (string memory) {
-        return levels.get(requiredLevel[_toBytes32(_title)]).title;
+    function levelRequired(string calldata _title) public view rewardExists(_title) returns (string memory) {
+        bytes32 level = requiredLevel[_toBytes32(_title)];
+        if (level.length == 0) revert NotFoundError("Required Level", _title);
+        return levels.get(level).title;
     }
 
     function createLevel(string calldata _title, uint256 _reputation) external restricted {
@@ -86,7 +87,7 @@ contract ReputationSystem is Initializable, PausableUpgradeable, AccessManagedUp
     function createReward(string calldata _title, uint256 _reputation, string calldata _levelRequired)
         external
         restricted
-        levelExists(_title)
+        levelExists(_levelRequired)
     {
         if (bytes(_title).length == 0) revert InvalidTitleError("Reward", _title);
         if (rewards.has(_title)) revert AlreadyExistError("Reward", _title);
@@ -108,19 +109,31 @@ contract ReputationSystem is Initializable, PausableUpgradeable, AccessManagedUp
         emit PenaltyCreated(_title, _reputation);
     }
 
-    function toogleLevelAvailability(string calldata _title) external restricted levelExists(_title) {
+    function getLevel(string calldata _title) external view returns (Level memory) {
+        return levels.get(_title);
+    }
+
+    function getReward(string calldata _title) external view returns (Reward memory) {
+        return rewards.get(_title);
+    }
+
+    function getPenalty(string calldata _title) external view returns (Penalty memory) {
+        return penalties.get(_title);
+    }
+
+    function toggleLevelAvailability(string calldata _title) external restricted levelExists(_title) {
         Level storage level = levels.get(_title);
         level.available = !level.available;
         emit LevelUpdated(level.title, level.reputation, level.available);
     }
 
-    function toogleRewardAvailability(string calldata _title) external restricted rewardExists(_title) {
+    function toggleRewardAvailability(string calldata _title) external restricted rewardExists(_title) {
         Reward storage reward = rewards.get(_title);
         reward.available = !reward.available;
         emit RewardUpdated(reward.title, reward.reputation, levelRequired(_title), reward.available);
     }
 
-    function tooglePenaltyAvailability(string calldata _title) external restricted penaltyExists(_title) {
+    function togglePenaltyAvailability(string calldata _title) external restricted penaltyExists(_title) {
         Penalty storage penalty = penalties.get(_title);
         penalty.available = !penalty.available;
         emit PenaltyUpdated(penalty.title, penalty.reputation, penalty.available);
@@ -167,7 +180,7 @@ contract ReputationSystem is Initializable, PausableUpgradeable, AccessManagedUp
 
         uint256 requiredReputation = level.reputation;
         uint256 contributorReputation = reputationOf(_contributor);
-        bool hasRequiredReputation = contributorReputation < requiredReputation;
+        bool hasRequiredReputation = requiredReputation <= contributorReputation;
 
         if (!hasRequiredReputation) revert InsufficientReputationError(contributorReputation, requiredReputation);
 
